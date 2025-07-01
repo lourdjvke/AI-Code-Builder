@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puter.js Web App Builder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Puter.js SDK -->
+    <script src="https://js.puter.com/v2/"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .top-bar {
+            background-color: #262626; /* Darker gray for top bar (monochrome) */
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            /* Removed border-bottom-left-radius and border-bottom-right-radius for no curve */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .top-bar button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+            background-color: #404040; /* Slightly lighter dark gray for buttons (monochrome) */
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .top-bar button:hover {
+            background-color: #525252; /* Even lighter dark gray on hover (monochrome) */
+            transform: translateY(-1px);
+        }
+        .top-bar button.active {
+            background-color: #737373; /* Active button color (monochrome) */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .content-area {
+            flex-grow: 1;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f9fafb; /* Lighter background for content */
+            border-radius: 1rem;
+            margin: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden; /* Ensure content doesn't overflow */
+        }
+        .preview-iframe-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease-in-out; /* Smooth transition for mobile/full view */
+        }
+        .preview-iframe-wrapper.mobile-view {
+            width: 375px; /* Typical mobile width */
+            height: 667px; /* Typical mobile height */
+            margin: 0 auto;
+            border: 8px solid #333; /* Border to simulate phone bezel */
+            border-radius: 2rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .preview-iframe-wrapper.mobile-view .preview-iframe {
+            border-radius: 1.5rem; /* Match wrapper border-radius */
+        }
+
+        .code-display {
+            width: 100%;
+            height: 100%; /* Ensure it takes full height of content-area */
+            background-color: #1a1a1a; /* Dark background for code (monochrome) */
+            color: #e0e0e0; /* Light gray for text (monochrome) */
+            font-family: 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.9rem;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow: auto; /* Make it scrollable within its bounds */
+            white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            flex-direction: column;
+            gap: 1rem;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom modal for alerts */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+        .custom-modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .custom-modal-content button {
+            background-color: #404040; /* Monochrome button */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+        .custom-modal-content button:hover {
+            background-color: #525252; /* Monochrome button hover */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen bg-gray-100">
+
+    <!-- Chat Container (Initial View) -->
+    <div id="chatContainer" class="chat-container">
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-4">Build Your Web App!</h1>
+        <p class="text-gray-600 text-center mb-6">Describe your design or upload an image to get started.</p>
+
+        <textarea id="designPrompt"
+                  class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent transition duration-200 resize-y min-h-[120px]"
+                  placeholder="e.g., 'A simple landing page with a hero section, a feature list, and a contact form. Use a clean, minimalist design.'"></textarea>
+
+        <input type="file" id="imageUpload" accept="image/*" class="w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+
+        <button id="sendButton"
+                class="w-full bg-gray-700 text-white py-3 rounded-lg font-bold text-lg hover:bg-gray-800 transition duration-200 shadow-md hover:shadow-lg">
+            Send Design
+        </button>
+    </div>
+
+    <!-- Top Bar (After Sending) -->
+    <div id="topBar" class="top-bar hidden">
+        <button id="previewBtn" class="active"><i class="fas fa-eye"></i> Preview</button>
+        <button id="codeBtn"><i class="fas fa-code"></i> Code</button>
+        <button id="copyCodeBtn" class="hidden"><i class="fas fa-copy"></i> Copy</button> <!-- New Copy Code button -->
+        <button id="followUpBtn"><i class="fas fa-pen-to-square"></i> Follow Up</button>
+        <button id="shareBtn"><i class="fas fa-share-alt"></i> Share</button>
+        <button id="resetBtn" class="ml-auto"><i class="fas fa-redo"></i> Reset</button> <!-- New Reset button -->
+        <div class="ml-4 flex items-center gap-2">
+            <span class="text-sm">View:</span>
+            <button id="mobileViewBtn" class="px-3 py-1 rounded-full text-sm bg-gray-600 hover:bg-gray-500">Mobile</button>
+            <button id="fullViewBtn" class="px-3 py-1 rounded-full text-sm bg-gray-500 hover:bg-gray-400 active">Full</button>
+        </div>
+    </div>
+
+    <!-- Content Area (Preview/Code) -->
+    <div id="contentArea" class="content-area hidden">
+        <div id="previewIframeWrapper" class="preview-iframe-wrapper">
+            <iframe id="previewIframe" class="preview-iframe"></iframe>
+        </div>
+        <pre id="codeDisplay" class="code-display hidden"></pre>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Building your web app...</p>
+        <p class="text-sm text-gray-300">This might take a moment.</p>
+    </div>
+
+    <!-- Custom Modal for Alerts -->
+    <div id="customModalOverlay" class="custom-modal-overlay hidden">
+        <div class="custom-modal-content">
+            <p id="modalMessage" class="text-gray-800 text-lg"></p>
+            <button id="modalCloseBtn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const designPrompt = document.getElementById('designPrompt');
+        const imageUpload = document.getElementById('imageUpload');
+        const sendButton = document.getElementById('sendButton');
+        const topBar = document.getElementById('topBar');
+        const previewBtn = document.getElementById('previewBtn');
+        const codeBtn = document.getElementById('codeBtn');
+        const copyCodeBtn = document.getElementById('copyCodeBtn'); // New copy button element
+        const followUpBtn = document.getElementById('followUpBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const resetBtn = document.getElementById('resetBtn'); // New reset button element
+        const mobileViewBtn = document.getElementById('mobileViewBtn');
+        const fullViewBtn = document.getElementById('fullViewBtn');
+        const contentArea = document.getElementById('contentArea');
+        const previewIframeWrapper = document.getElementById('previewIframeWrapper');
+        const previewIframe = document.getElementById('previewIframe');
+        const codeDisplay = document.getElementById('codeDisplay');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const customModalOverlay = document.getElementById('customModalOverlay');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        let generatedCode = ''; // To store the AI-generated code
+        let isMobileView = false; // State for mobile view
+
+        // Function to show custom modal
+        function showModal(message) {
+            modalMessage.textContent = message;
+            customModalOverlay.classList.remove('hidden');
+        }
+
+        // Close modal when OK button is clicked
+        modalCloseBtn.addEventListener('click', () => {
+            customModalOverlay.classList.add('hidden');
+        });
+
+        // Function to reset iframe content and listeners
+        function resetIframe() {
+            previewIframe.srcdoc = ''; // Clear content
+            // No need to remove inspect-related listeners as inspect mode is removed
+        }
+
+        // Event listener for the Send button
+        sendButton.addEventListener('click', async () => {
+            const promptText = designPrompt.value.trim();
+            const imageFile = imageUpload.files[0];
+
+            if (!promptText && !imageFile) {
+                showModal('Please enter a design description or upload an image.');
+                return;
+            }
+
+            chatContainer.classList.add('hidden');
+            topBar.classList.remove('hidden');
+            contentArea.classList.remove('hidden');
+            loadingOverlay.classList.remove('hidden');
+            resetIframe(); // Clear iframe before new generation
+
+            // Clear input fields after sending
+            designPrompt.value = '';
+            imageUpload.value = ''; // Clear the file input
+
+            let systemPrompt = `You are a web app builder. Generate a complete, single-page web application using HTML, Tailwind CSS, and JavaScript. All CSS should be inline Tailwind classes, and all JavaScript should be within <script> tags in the HTML. Do NOT use external CSS files or separate JS files. Ensure any JavaScript variables or functions are scoped to avoid global conflicts (e.g., wrap in an IIFE if necessary, but keep it simple). Provide the full HTML document, including the <!DOCTYPE html> and <html> tags. Ensure the generated code is directly runnable in a browser.`;
+
+            let mainPrompt = promptText ? `User's Design Description: ${promptText}` : "Generate a simple web app.";
+            let chatArguments = [systemPrompt + "\n" + mainPrompt]; 
+
+            if (imageFile) {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const base64ImageData = e.target.result.split(',')[1]; // Get base64 part
+                        chatArguments.push({
+                            inlineData: {
+                                mimeType: imageFile.type,
+                                data: base64ImageData
+                            }
+                        });
+                        await callPuterAI(chatArguments);
+                    };
+                    reader.readAsDataURL(imageFile);
+                } catch (error) {
+                    console.error('Error reading image file:', error);
+                    loadingOverlay.classList.add('hidden');
+                    showModal('Error processing image. Please try again.');
+                    // Revert UI if error before AI call
+                    chatContainer.classList.remove('hidden');
+                    topBar.classList.add('hidden');
+                    contentArea.classList.add('hidden');
+                }
+            } else {
+                await callPuterAI(chatArguments); // Call with only text
+            }
+        });
+
+        async function callPuterAI(args) { 
+            try {
+                const result = await puter.ai.chat(...args);
+
+                if (result && result.message && typeof result.message.content === 'string') {
+                    let rawCode = result.message.content;
+
+                    // Remove markdown code block fences (```html\n and \n```)
+                    if (rawCode.startsWith('```html\n') && rawCode.endsWith('\n```')) {
+                        rawCode = rawCode.substring('```html\n'.length, rawCode.length - '\n```'.length);
+                    } else if (rawCode.startsWith('```\n') && rawCode.endsWith('\n```')) {
+                        rawCode = rawCode.substring('```\n'.length, rawCode.length - '\n```'.length);
+                    }
+                    
+                    generatedCode = rawCode;
+                    displayContent('preview'); // Show preview by default after generation
+                } else {
+                    showModal('AI did not return valid content. Please try a different prompt.');
+                    console.error('AI response structure unexpected:', result);
+                }
+            } catch (error) {
+                console.error('Error calling Puter.js AI:', error);
+                showModal('Failed to generate web app. Please try again later.');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        // Function to display content (preview or code)
+        function displayContent(view) {
+            previewBtn.classList.remove('active');
+            codeBtn.classList.remove('active');
+            followUpBtn.classList.remove('active'); // Deactivate follow up button
+            copyCodeBtn.classList.add('hidden'); // Hide copy button by default
+
+            if (view === 'preview') {
+                previewBtn.classList.add('active');
+                previewIframeWrapper.classList.remove('hidden');
+                codeDisplay.classList.add('hidden');
+                
+                // Load the generated HTML into the iframe
+                if (generatedCode) {
+                    const doc = previewIframe.contentWindow.document;
+                    doc.open();
+                    doc.write(generatedCode);
+                    doc.close();
+                } else {
+                    previewIframe.srcdoc = ''; // Clear iframe if no code
+                }
+            } else if (view === 'code') {
+                codeBtn.classList.add('active');
+                previewIframeWrapper.classList.add('hidden');
+                codeDisplay.classList.remove('hidden');
+                codeDisplay.textContent = generatedCode; // Display the raw code
+                copyCodeBtn.classList.remove('hidden'); // Show copy button when code is displayed
+            }
+        }
+
+        // Mobile/Full View Toggle Functions
+        function setMobileView(enable) {
+            isMobileView = enable;
+            if (enable) {
+                previewIframeWrapper.classList.add('mobile-view');
+                mobileViewBtn.classList.add('active');
+                fullViewBtn.classList.remove('active');
+            } else {
+                previewIframeWrapper.classList.remove('mobile-view');
+                mobileViewBtn.classList.remove('active');
+                fullViewBtn.classList.add('active');
+            }
+        }
+
+        // Follow Up Function
+        followUpBtn.addEventListener('click', () => {
+            if (!generatedCode) {
+                showModal('Please generate a web app first before attempting to follow up.');
+                return;
+            }
+            chatContainer.classList.remove('hidden');
+            topBar.classList.add('hidden');
+            contentArea.classList.add('hidden'); // Hide content area (preview/code)
+            
+            // Pre-populate prompt for follow-up
+            designPrompt.value = `Modify the current web app. Current code:\n\`\`\`html\n${generatedCode}\n\`\`\`\n\nMy modification request: `;
+            designPrompt.focus();
+            // Scroll to the end of the pre-populated text
+            designPrompt.setSelectionRange(designPrompt.value.length, designPrompt.value.length);
+        });
+
+        // Copy Code Function
+        copyCodeBtn.addEventListener('click', () => {
+            if (generatedCode) {
+                // Create a temporary textarea to copy the text
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = generatedCode;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                showModal('Code copied to clipboard!');
+            } else {
+                showModal('No code to copy.');
+            }
+        });
+
+        // Reset App Function
+        resetBtn.addEventListener('click', () => {
+            generatedCode = '';
+            designPrompt.value = '';
+            imageUpload.value = '';
+            chatContainer.classList.remove('hidden');
+            topBar.classList.add('hidden');
+            contentArea.classList.add('hidden');
+            resetIframe();
+            showModal('App reset. You can start a new design!');
+        });
+
+        // Share Function (Download HTML)
+        shareBtn.addEventListener('click', () => {
+            if (generatedCode) {
+                const blob = new Blob([generatedCode], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my-web-app.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showModal('HTML file downloaded!');
+            } else {
+                showModal('No code to share. Generate an app first!');
+            }
+        });
+
+
+        // Event listeners for top bar buttons
+        previewBtn.addEventListener('click', () => displayContent('preview'));
+        codeBtn.addEventListener('click', () => displayContent('code'));
+        // Removed inspectBtn listener
+        mobileViewBtn.addEventListener('click', () => setMobileView(true));
+        fullViewBtn.addEventListener('click', () => setMobileView(false));
+
+        // Initial state for view buttons
+        setMobileView(false); // Default to full view
+
+    </script>
+</body>
+</html>
