@@ -1,8 +1,20 @@
 # Puter.js Web App Builder
 
-<!-- Placeholder image, replace with an actual logo if you create one -->
-
 A cutting-edge, AI-powered web application builder that streamlines frontend development. Describe your desired web app, optionally provide an image, and watch as the AI generates a complete, single-page HTML, Tailwind CSS, and JavaScript solution. This project leverages the power of [Puter.js](https://developer.puter.com/) to provide serverless AI capabilities directly in your browser, entirely free for developers and without the need for API keys.
+
+## App Screenshots
+
+![Initial chat interface for design input.](https://github.com/lourdjvke/AI-Code-Builder/blob/main/AI2.PNG?raw=true)
+*Initial chat interface for design input.*
+
+![Live preview of a generated web app.](https://github.com/lourdjvke/AI-Code-Builder/blob/main/AI.PNG?raw=true)
+*Live preview of a generated web app.*
+
+![Code view of the generated web app.](https://github.com/lourdjvke/AI-Code-Builder/blob/main/AI3.PNG?raw=true)
+*Code view of the generated web app.*
+
+![Mobile view of a generated web app.](https://github.com/lourdjvke/AI-Code-Builder/blob/main/AI4.PNG?raw=true)
+*Mobile view of a generated web app.*
 
 ## ✨ Features
 
@@ -90,5 +102,3 @@ A cutting-edge, AI-powered web application builder that streamlines frontend dev
 ## 📄 License
 
 This project is open-source and available under the [MIT License](https://www.google.com/search?q=LICENSE).
-
-Feel free to adjust any part of this description or `README.md` to better reflect your vision for the project
